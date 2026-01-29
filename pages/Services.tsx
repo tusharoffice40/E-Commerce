@@ -1,16 +1,24 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, Filter, Star, ChevronDown } from 'lucide-react';
+import { Search, Filter, Star, ChevronDown, X } from 'lucide-react';
 import { SERVICES, CATEGORIES } from '../constants';
 
 const Services: React.FC = () => {
-  const [searchParams] = useSearchParams();
-  const initialCategory = searchParams.get('category');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const categoryParam = searchParams.get('category');
+  const queryParam = searchParams.get('q');
   
-  const [selectedCategory, setSelectedCategory] = useState<string>(initialCategory || 'All');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>(categoryParam || 'All');
+  const [searchQuery, setSearchQuery] = useState(queryParam || '');
   const [sortBy, setSortBy] = useState('Recommended');
+
+  // Sync internal state with URL params
+  useEffect(() => {
+    if (categoryParam) setSelectedCategory(categoryParam);
+    if (queryParam !== null) setSearchQuery(queryParam);
+    else if (queryParam === null && !searchQuery) setSearchQuery('');
+  }, [categoryParam, queryParam]);
 
   const filteredServices = useMemo(() => {
     return SERVICES.filter(s => {
@@ -26,11 +34,46 @@ const Services: React.FC = () => {
     });
   }, [selectedCategory, searchQuery, sortBy]);
 
+  const clearAllFilters = () => {
+    setSelectedCategory('All');
+    setSearchQuery('');
+    setSearchParams({});
+  };
+
+  const handleSearchInputChange = (val: string) => {
+    setSearchQuery(val);
+    if (val) {
+      setSearchParams({ ...Object.fromEntries(searchParams), q: val });
+    } else {
+      const newParams = Object.fromEntries(searchParams);
+      delete newParams.q;
+      setSearchParams(newParams);
+    }
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="mb-12">
         <h1 className="text-4xl font-bold text-slate-900 mb-4">Our Professional Services</h1>
         <p className="text-slate-500">Find exactly what your project needs from our curated marketplace.</p>
+        {(selectedCategory !== 'All' || searchQuery) && (
+          <div className="flex flex-wrap items-center gap-2 mt-6">
+            <span className="text-sm text-slate-400 font-medium">Active filters:</span>
+            {selectedCategory !== 'All' && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-bold border border-orange-200">
+                Category: {selectedCategory}
+                <button onClick={() => setSelectedCategory('All')} className="ml-2 hover:text-orange-900"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            {searchQuery && (
+              <span className="inline-flex items-center px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">
+                Search: {searchQuery}
+                <button onClick={() => handleSearchInputChange('')} className="ml-2 hover:text-slate-900"><X className="w-3 h-3" /></button>
+              </span>
+            )}
+            <button onClick={clearAllFilters} className="text-xs text-orange-600 font-bold hover:underline ml-2">Clear all</button>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col lg:flex-row gap-8">
@@ -45,7 +88,15 @@ const Services: React.FC = () => {
                 {['All', ...CATEGORIES].map(cat => (
                   <button
                     key={cat}
-                    onClick={() => setSelectedCategory(cat)}
+                    onClick={() => {
+                      setSelectedCategory(cat);
+                      if (cat !== 'All') setSearchParams({ ...Object.fromEntries(searchParams), category: cat });
+                      else {
+                        const newParams = Object.fromEntries(searchParams);
+                        delete newParams.category;
+                        setSearchParams(newParams);
+                      }
+                    }}
                     className={`w-full text-left px-4 py-2 rounded-xl text-sm font-medium transition-colors ${
                       selectedCategory === cat 
                       ? 'bg-orange-600 text-white shadow-lg shadow-orange-100' 
@@ -78,7 +129,7 @@ const Services: React.FC = () => {
                 type="text" 
                 placeholder="Search services..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchInputChange(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-sm"
               />
             </div>
@@ -139,7 +190,7 @@ const Services: React.FC = () => {
             <div className="text-center py-24 bg-white rounded-3xl border border-slate-100">
                <p className="text-slate-500 font-medium">No services match your criteria.</p>
                <button 
-                onClick={() => { setSelectedCategory('All'); setSearchQuery(''); }}
+                onClick={clearAllFilters}
                 className="mt-4 text-orange-600 font-bold"
                >
                  Clear all filters

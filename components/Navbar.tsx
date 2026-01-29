@@ -1,7 +1,7 @@
 
-import React from 'react';
-import { ShoppingCart, User, Search, Globe, Menu, X, LogOut } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { ShoppingCart, User, Search, Globe, Menu, X, LogOut, ArrowRight } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { User as UserType } from '../types';
 
 interface NavbarProps {
@@ -12,14 +12,38 @@ interface NavbarProps {
 }
 
 const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, user, onLogout }) => {
-  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/services?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
+      setSearchQuery('');
+    }
+  };
+
+  const toggleSearch = () => {
+    setIsSearchOpen(!isSearchOpen);
+    if (isSearchOpen) setSearchQuery('');
+  };
 
   return (
     <nav className="sticky top-0 z-50 glass-effect border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
+          <Link to="/" className={`flex items-center space-x-2 transition-opacity ${isSearchOpen ? 'opacity-0 pointer-events-none md:opacity-100' : 'opacity-100'}`}>
             <div className="w-8 h-8 bg-orange-600 rounded-lg flex items-center justify-center shadow-lg shadow-orange-200">
               <Globe className="text-white w-5 h-5" />
             </div>
@@ -29,15 +53,51 @@ const Navbar: React.FC<NavbarProps> = ({ cartCount, onOpenCart, user, onLogout }
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center space-x-8">
+          <div className={`hidden md:flex items-center space-x-8 transition-opacity ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <Link to="/services" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Services</Link>
             <Link to="/about" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">About</Link>
             <Link to="/contact" className="text-slate-600 hover:text-orange-600 font-medium transition-colors">Contact</Link>
           </div>
 
+          {/* Search Bar Overlay */}
+          {isSearchOpen && (
+            <div className="absolute inset-0 flex items-center px-4 bg-white md:bg-transparent z-10 animate-in fade-in slide-in-from-top-2 duration-200">
+              <form onSubmit={handleSearchSubmit} className="max-w-3xl mx-auto w-full relative flex items-center">
+                <Search className="absolute left-4 w-5 h-5 text-slate-400" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="What service are you looking for?"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Escape' && setIsSearchOpen(false)}
+                  className="w-full pl-12 pr-24 py-3 bg-slate-50 md:bg-white/80 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-orange-500 shadow-xl"
+                />
+                <div className="absolute right-2 flex items-center space-x-2">
+                  <button 
+                    type="submit"
+                    className="p-2 bg-orange-600 text-white rounded-xl hover:bg-orange-700 transition-colors"
+                  >
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={toggleSearch}
+                    className="p-2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           {/* Actions */}
-          <div className="flex items-center space-x-4">
-            <button className="p-2 text-slate-500 hover:text-orange-600 transition-colors">
+          <div className={`flex items-center space-x-4 transition-opacity ${isSearchOpen ? 'opacity-0 pointer-events-none md:opacity-100' : 'opacity-100'}`}>
+            <button 
+              onClick={toggleSearch}
+              className="p-2 text-slate-500 hover:text-orange-600 transition-colors"
+            >
               <Search className="w-5 h-5" />
             </button>
             <button 

@@ -24,8 +24,13 @@ const App: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [user, setUser] = useState<User | null>(() => {
-    const saved = localStorage.getItem('e_services_user');
-    return saved ? JSON.parse(saved) : null;
+    try {
+      const saved = localStorage.getItem('e_services_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (error) {
+      console.error("Failed to parse user from localStorage", error);
+      return null;
+    }
   });
 
   const handleLogin = (name: string, email: string) => {
